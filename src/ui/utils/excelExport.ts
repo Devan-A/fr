@@ -3,73 +3,72 @@ import type { ParsedBoard } from '../../types';
 import { MASTER_PROMPT, PROMPTS } from './prompts';
 
 /**
- * Builds Tab 1 data rows: project_id, role_id, role_name.
+ * Builds Tab 1 data rows: role_id, role_name.
  */
 function buildTab1(board: ParsedBoard): string[][] {
-  const rows: string[][] = [['project_id', 'role_id', 'role_name']];
+  const rows: string[][] = [['role_id', 'role_name']];
   for (const role of board.roles) {
-    rows.push([board.projectId, String(role.roleId), role.name]);
+    rows.push([String(role.roleId), role.name]);
   }
   return rows;
 }
 
 /**
- * Builds Tab 2 data rows: project_id, role_id, role_objective.
+ * Builds Tab 2 data rows: role_id, role_objective.
  * One row per objective per role.
  */
 function buildTab2(board: ParsedBoard): string[][] {
-  const rows: string[][] = [['project_id', 'role_id', 'role_objective']];
+  const rows: string[][] = [['role_id', 'role_objective']];
   for (const role of board.roles) {
     for (const obj of role.objectives) {
-      rows.push([board.projectId, String(role.roleId), obj]);
+      rows.push([String(role.roleId), obj]);
     }
   }
   return rows;
 }
 
 /**
- * Builds Tab 3 data rows: project_id, role_id, pain_point.
+ * Builds Tab 3 data rows: role_id, pain_point.
  * One row per pain point per role.
  */
 function buildTab3(board: ParsedBoard): string[][] {
-  const rows: string[][] = [['project_id', 'role_id', 'pain_point']];
+  const rows: string[][] = [['role_id', 'pain_point']];
   for (const role of board.roles) {
     for (const pp of role.painPoints) {
-      rows.push([board.projectId, String(role.roleId), pp]);
+      rows.push([String(role.roleId), pp]);
     }
   }
   return rows;
 }
 
 /**
- * Builds Tab 4 data rows: project_id, role_id, tools.
+ * Builds Tab 4 data rows: role_id, tools.
  * One row per tool per role.
  */
 function buildTab4(board: ParsedBoard): string[][] {
-  const rows: string[][] = [['project_id', 'role_id', 'tools']];
+  const rows: string[][] = [['role_id', 'tools']];
   for (const role of board.roles) {
     for (const tool of role.tools) {
-      rows.push([board.projectId, String(role.roleId), tool]);
+      rows.push([String(role.roleId), tool]);
     }
   }
   return rows;
 }
 
 /**
- * Builds Tab 5 data rows: project_id, additional_context, category.
+ * Builds Tab 5 data rows: additional_context, category.
  * One row per context entry.
  */
 function buildTab5(board: ParsedBoard): string[][] {
-  const rows: string[][] = [['project_id', 'additional_context', 'category']];
+  const rows: string[][] = [['additional_context', 'category']];
   for (const entry of board.context) {
-    rows.push([board.projectId, entry.text, entry.category]);
+    rows.push([entry.text, entry.category]);
   }
   return rows;
 }
 
 /**
  * Adds a prompt text block followed by a gap and then data tables to a worksheet.
- * Returns the populated worksheet.
  */
 function buildPromptSheet(
   promptTitle: string,
@@ -105,7 +104,6 @@ function buildPromptSheet(
 
   ws['!cols'] = [
     { wch: 80 },
-    { wch: 20 },
     { wch: 60 },
   ];
 
@@ -116,11 +114,8 @@ function buildPromptSheet(
  * Generates a complete 6-sheet Excel workbook and triggers download.
  *
  * @param board - The parsed board data from the FigJam plugin controller.
- * @param projectId - Overridden project ID from the UI (if user changed it).
  */
-export function generateAndDownloadExcel(board: ParsedBoard, projectId: string): void {
-  const exportBoard = { ...board, projectId };
-
+export function generateAndDownloadExcel(board: ParsedBoard): void {
   const wb = XLSX.utils.book_new();
 
   const masterRows = MASTER_PROMPT.split('\n').map(line => [line]);
@@ -128,11 +123,11 @@ export function generateAndDownloadExcel(board: ParsedBoard, projectId: string):
   masterWs['!cols'] = [{ wch: 100 }];
   XLSX.utils.book_append_sheet(wb, masterWs, 'Master Prompt');
 
-  const tab1 = buildTab1(exportBoard);
-  const tab2 = buildTab2(exportBoard);
-  const tab3 = buildTab3(exportBoard);
-  const tab4 = buildTab4(exportBoard);
-  const tab5 = buildTab5(exportBoard);
+  const tab1 = buildTab1(board);
+  const tab2 = buildTab2(board);
+  const tab3 = buildTab3(board);
+  const tab4 = buildTab4(board);
+  const tab5 = buildTab5(board);
 
   const allDataTables = [
     { label: 'Tab 1 — Role Names', rows: tab1 },
@@ -167,13 +162,10 @@ export function generateAndDownloadExcel(board: ParsedBoard, projectId: string):
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   });
 
-  const sanitizedName = projectId.replace(/[^a-zA-Z0-9_-]/g, '_');
-  const filename = `${sanitizedName}_frame_export.xlsx`;
-
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = filename;
+  a.download = 'frame_export.xlsx';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

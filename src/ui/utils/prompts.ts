@@ -2,30 +2,36 @@
  * Master prompt displayed on Sheet 1 — written as direct instructions for Copilot,
  * not for a human reader.
  */
-export const MASTER_PROMPT = `# Instructions
+export const MASTER_PROMPT = `# Instructions — READ IN FULL BEFORE STARTING
 
-You are receiving a workbook with 6 sheets. This sheet (Sheet 1) contains your instructions. Sheets 2–6 each contain a prompt and, where applicable, structured data extracted from a FigJam board.
+You are receiving a workbook with 6 sheets. This sheet (Sheet 1) contains your instructions. Sheets 2–6 each contain a prompt and, where applicable, structured data. You will also receive a separate document containing a Business Problem Statement from a previous workshop.
 
-You will also receive a separate document containing a Business Problem Statement from a previous workshop.
+## CRITICAL RULES — DO NOT SKIP OR SHORTEN ANY STEP
 
-## Workflow
+- You MUST execute ALL 5 prompts (Sheets 2–6) in full, in order.
+- You MUST produce the COMPLETE output specified by each prompt. Do not summarize, abbreviate, truncate, or paraphrase any section.
+- Every section, bullet point, heading, and formatting requirement described in each prompt is MANDATORY.
+- If a prompt says to generate 5–8 items, generate at least 5. If it says 3–5, generate at least 3. Never produce fewer than the minimum.
+- Do NOT combine, merge, or skip prompts. Each prompt is a separate task with a separate output.
+- Do NOT say "as discussed above" or "see previous output" in place of producing actual content. Each output must stand on its own.
+- After each prompt, confirm completion before moving to the next.
 
-Execute the prompts in order, Sheet 2 through Sheet 6:
+## Workflow — Execute in Strict Order
 
 1. **Sheet 2 — Prompt 1: Role Profiles**
-   Use the prompt and the dataset provided on that sheet to generate psychological role profiles.
+   Read the prompt and the dataset on that sheet. Generate the FULL output: a complete role profile for EVERY unique role_id, with ALL required sections (Role Summary, Pain Points, Tools, Needs, Key Use Cases, Behavioral Patterns). Do not skip any role. Do not omit any section.
 
 2. **Sheet 3 — Prompt 2: Human Problem Statement**
-   Use the prompt and the dataset provided on that sheet to synthesize a unified human problem statement.
+   Read the prompt and the dataset on that sheet. Generate the FULL output: the complete Human Problem Statement, Underlying Needs, and Key Contextual Forces. Do not shorten the statement.
 
 3. **Sheet 4 — Prompt 3: Business Problem Update**
-   Use the prompt on that sheet. The original business problem statement comes from the separately uploaded document. Incorporate your outputs from Prompts 1 and 2 as the "new information."
+   Read the prompt on that sheet. The original business problem statement comes from the separately uploaded document. Use your outputs from Prompts 1 and 2 as the "new information." Generate the FULL output: the Updated Business Problem Statement and Summary of Changes.
 
 4. **Sheet 5 — Prompt 4: Solution Hypotheses**
-   Use the prompt on that sheet. Draw on your outputs from Prompts 1–3 as the required inputs.
+   Read the prompt on that sheet. Use your outputs from Prompts 1–3 as inputs. Generate the FULL output: 5–8 complete hypotheses, each with the If/Then/Because/We Will Know structure. Do not generate fewer than 5.
 
 5. **Sheet 6 — Prompt 5: Solution Ideas & DVF Evaluation**
-   Use the prompt on that sheet. Draw on your outputs from all prior prompts as the required inputs.
+   Read the prompt on that sheet. Use your outputs from all prior prompts. Generate the FULL output: multiple solution ideas, each with a full DVF evaluation (Desirable, Viable, Feasible ratings + analysis), Risks & Unknowns, and an Overall Recommendation. Do not skip the DVF evaluation for any idea.
 
 ## Data Notes
 
@@ -33,23 +39,25 @@ Execute the prompts in order, Sheet 2 through Sheet 6:
 - Sheets 4–6 do not include board data; they rely on your prior outputs within this conversation.
 - The Business Problem Statement is in the separately uploaded document, not in this workbook.
 
-## Final Output
+## Final Output — MANDATORY
 
-After completing all 5 prompts, compile all 5 generated outputs into separate documents and package them into a single ZIP file for download. Name each file:
+After completing ALL 5 prompts, you MUST compile all 5 generated outputs into separate documents and package them into a single ZIP file for download. Name each file:
 - 01-Role-Profiles.md
 - 02-Human-Problem-Statement.md
 - 03-Updated-Business-Problem.md
 - 04-Solution-Hypotheses.md
 - 05-Solution-Ideas-DVF.md
+
+Do NOT skip the ZIP file step. This is a required deliverable.
 `;
 
 export const PROMPT_1_ROLE_PROFILES = `#Role
 You are an expert organizational psychologist and behavioral researcher. Your task is to generate comprehensive role profiles using the structured dataset I will provide. The dataset contains multiple tabs merged into one structure, with the following relationships:
-- **Tab 1:** project_id, role_id, role_name
-- **Tab 2:** project_id, role_id, role_objective
-- **Tab 3:** project_id, role_id, pain_point
-- **Tab 4:** project_id, role_id, tools
-- **Tab 5:** project_id, additional_context, category
+- **Tab 1:** role_id, role_name
+- **Tab 2:** role_id, role_objective
+- **Tab 3:** role_id, pain_point
+- **Tab 4:** role_id, tools
+- **Tab 5:** additional_context, category
   (Categories: General Description, External Complexifiers, Starting Hypotheses, Data Details)
 
 ### Your Goal
@@ -57,7 +65,6 @@ Using all rows that share the same \`role_id\`, create a single, unified psychol
 
 ### Inputs You Will Receive
 I will provide the full dataset in a structured format, where each row includes:
-- project_id
 - role_id
 - role_name
 - role_objective (0–many per role_id)
@@ -101,7 +108,7 @@ For each **unique role_id**, produce a psychologically rich profile with the fol
 - It is acceptable to infer needs, patterns, and scenarios, but they must be grounded in the real context.
 - A single role_id may appear many times—aggregate all entries.
 - A role profile must not mix data from different role_ids.
-- The project_id will be consistent across all tabs; use project-level context to enrich all profiles.
+- Use project-level context (Tab 5) to enrich all profiles.
 - Do **not** summarize the dataset. Your output must be *fully rewritten*, not copied.
 
 ### Output Format
@@ -145,11 +152,11 @@ export const PROMPT_2_HUMAN_PROBLEM = `#Role
 You are an expert product strategist with deep experience identifying real customer needs, uncovering opportunity areas, and synthesizing complex qualitative and quantitative inputs into clear, compelling human problem statements.
 
 Your task is to generate a **Human Problem Statement** using the structured dataset I will provide. The dataset is organized across multiple tabs, with the following schema:
-- **Tab 1:** project_id, role_id, role_name
-- **Tab 2:** project_id, role_id, role_objective
-- **Tab 3:** project_id, role_id, pain_point
-- **Tab 4:** project_id, role_id, tools
-- **Tab 5:** project_id, additional_context, category
+- **Tab 1:** role_id, role_name
+- **Tab 2:** role_id, role_objective
+- **Tab 3:** role_id, pain_point
+- **Tab 4:** role_id, tools
+- **Tab 5:** additional_context, category
   (General Description, External Complexifiers, Starting Hypotheses, Data Details)
 
 ### Your Goal
@@ -166,7 +173,6 @@ This statement should reflect both:
 
 ### Inputs You Will Receive
 I will provide the full dataset in a structured format. Each row may include:
-- project_id
 - role_id
 - role_name
 - role_objective

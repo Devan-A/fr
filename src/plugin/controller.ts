@@ -141,10 +141,8 @@ function parseBoard(): ParsedBoard {
   }
 
   const roles = Array.from(roleMap.values()).sort((a, b) => a.roleId - b.roleId);
-  const projectId = figma.root.name || figma.currentPage.name || 'project';
 
   return {
-    projectId,
     roles,
     context: contextEntries,
     lastParsed: new Date().toISOString(),

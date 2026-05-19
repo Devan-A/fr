@@ -74,7 +74,6 @@ export default function App() {
   const [state, setState] = useState<AppState>('idle');
   const [board, setBoard] = useState<ParsedBoard | null>(null);
   const [summary, setSummary] = useState<ParseSummary | null>(null);
-  const [projectId, setProjectId] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
@@ -90,9 +89,6 @@ export default function App() {
         case 'BOARD_DATA':
           setBoard(msg.payload);
           setSummary(computeSummary(msg.payload));
-          if (!projectId) {
-            setProjectId(msg.payload.projectId);
-          }
           setState('parsed');
           break;
 
@@ -105,7 +101,7 @@ export default function App() {
 
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
-  }, [projectId]);
+  }, []);
 
   const handleParseBoard = useCallback(() => {
     setState('parsing');
@@ -115,8 +111,8 @@ export default function App() {
 
   const handleExport = useCallback(() => {
     if (!board) return;
-    generateAndDownloadExcel(board, projectId || board.projectId);
-  }, [board, projectId]);
+    generateAndDownloadExcel(board);
+  }, [board]);
 
   return (
     <div className="flex flex-col h-screen p-4 gap-4 overflow-y-auto">
@@ -128,20 +124,6 @@ export default function App() {
         <p className="text-xs" style={{ color: 'var(--figma-color-text-secondary)' }}>
           Parse frame data and export to a structured Excel workbook for Copilot.
         </p>
-      </div>
-
-      {/* Project ID */}
-      <div className="flex flex-col gap-1.5">
-        <label className="text-xs font-medium" style={{ color: 'var(--figma-color-text-secondary)' }}>
-          Project ID
-        </label>
-        <input
-          type="text"
-          className="input-field"
-          placeholder="Auto-detected from file name…"
-          value={projectId}
-          onChange={(e) => setProjectId(e.target.value)}
-        />
       </div>
 
       {/* Parse Button */}

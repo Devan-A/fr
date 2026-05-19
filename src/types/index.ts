@@ -23,7 +23,6 @@ export interface ContextEntry {
  * Complete parsed board data sent from controller to UI.
  */
 export interface ParsedBoard {
-  projectId: string;
   roles: RoleData[];
   context: ContextEntry[];
   lastParsed: string;
