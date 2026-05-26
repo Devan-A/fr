@@ -7,10 +7,15 @@ import type {
 
 declare const __html__: string;
 
-const ROLE_NAME_PATTERN = /^role-(\d+)-name$/i;
-const ROLE_OBJECTIVES_PATTERN = /^role-(\d+)-objec/i;
-const ROLE_PAIN_POINTS_PATTERN = /^role-(\d+)-pain-po/i;
-const ROLE_TOOLS_PATTERN = /^role-(\d+)-tools$/i;
+/** Matches "Role 1", "Role 2", "role 3", "Role-1", etc. */
+const ROLE_CONTAINER_PATTERN = /^role[- ]?(\d+)$/i;
+
+/** Child section names inside each Role container. */
+const NAME_PATTERN = /^name$/i;
+const OBJECTIVE_PATTERN = /^objective/i;
+const PAIN_POINTS_PATTERN = /^pain[- ]?points?/i;
+const TOOLS_PATTERN = /^tools?$/i;
+const NOTES_PATTERN = /^notes?$/i;
 
 const CONTEXT_SECTIONS: Record<string, RegExp> = {
   'General Description': /^general[- ]?description$/i,
@@ -25,12 +30,23 @@ function isContainerNode(node: SceneNode): node is FrameNode | GroupNode | Secti
 
 /**
  * Collects text only from STICKY nodes inside a container, recursively.
- * Ignores TEXT nodes (which are typically instructional labels on the board).
+ * Ignores TEXT nodes (instructional labels) and any children matching
+ * the skip patterns.
  */
-function collectOnlyStickies(container: FrameNode | GroupNode | SectionNode): string[] {
+function collectOnlyStickies(
+  container: FrameNode | GroupNode | SectionNode,
+  skipPatterns: RegExp[] = []
+): string[] {
   const texts: string[] = [];
 
+  function shouldSkip(name: string): boolean {
+    const normalized = name.toLowerCase().trim();
+    return skipPatterns.some(p => p.test(normalized));
+  }
+
   function walk(node: SceneNode): void {
+    if (shouldSkip(node.name)) return;
+
     if (node.type === 'STICKY') {
       const text = node.text.characters.trim();
       if (text) texts.push(text);
@@ -50,37 +66,72 @@ function collectOnlyStickies(container: FrameNode | GroupNode | SectionNode): st
 }
 
 /**
- * Gets the first sticky's text from a container.
- * Used for single-value sections like Role-N-Name.
+ * Finds a direct child container whose name matches the given pattern.
  */
-function getFirstStickyText(container: FrameNode | GroupNode | SectionNode): string {
-  const stickies = collectOnlyStickies(container);
-  return stickies.length > 0 ? stickies[0] : '';
+function findChildSection(
+  parent: FrameNode | GroupNode | SectionNode,
+  pattern: RegExp
+): (FrameNode | GroupNode | SectionNode) | null {
+  for (const child of parent.children) {
+    if (isContainerNode(child) && pattern.test(child.name.toLowerCase().trim())) {
+      return child;
+    }
+  }
+  for (const child of parent.children) {
+    if (isContainerNode(child)) {
+      const found = findChildSection(child, pattern);
+      if (found) return found;
+    }
+  }
+  return null;
 }
 
 /**
- * Ensures a RoleData entry exists in the map for the given role index.
+ * Parses a single Role container, extracting Name, Objective, Pain Points,
+ * and Tools from its child sections. Notes sections are skipped.
  */
-function ensureRole(roleMap: Map<number, RoleData>, roleIndex: number): RoleData {
-  let role = roleMap.get(roleIndex);
-  if (!role) {
-    role = {
-      roleId: roleIndex,
-      name: '',
-      objectives: [],
-      painPoints: [],
-      tools: [],
-    };
-    roleMap.set(roleIndex, role);
+function parseRoleContainer(
+  container: FrameNode | GroupNode | SectionNode,
+  roleIndex: number
+): RoleData {
+  const role: RoleData = {
+    roleId: roleIndex,
+    name: '',
+    objectives: [],
+    painPoints: [],
+    tools: [],
+  };
+
+  const nameSection = findChildSection(container, NAME_PATTERN);
+  if (nameSection) {
+    const stickies = collectOnlyStickies(nameSection);
+    if (stickies.length > 0) role.name = stickies[0];
   }
+
+  const objSection = findChildSection(container, OBJECTIVE_PATTERN);
+  if (objSection) {
+    role.objectives = collectOnlyStickies(objSection);
+  }
+
+  const painSection = findChildSection(container, PAIN_POINTS_PATTERN);
+  if (painSection) {
+    role.painPoints = collectOnlyStickies(painSection);
+  }
+
+  const toolsSection = findChildSection(container, TOOLS_PATTERN);
+  if (toolsSection) {
+    role.tools = collectOnlyStickies(toolsSection);
+  }
+
   return role;
 }
 
 /**
- * Main board parsing function. Scans the entire page for named sections
- * matching Role-N-Name, Role-N-Objectives, Role-N-Pain-Points, Role-N-Tools,
- * and contextual sections. These sections can appear anywhere on the page
- * (they don't need to be nested inside a Role-N container).
+ * Main board parsing function. Scans the entire page for:
+ * - "Role N" container frames, then parses their child sections (Name,
+ *   Objective, Pain Points, Tools). Notes sections are ignored.
+ * - Contextual sections (General Description, External Complexifiers,
+ *   Starting Hypotheses, Data Details).
  *
  * Only STICKY node text is captured; TEXT nodes are ignored since they
  * contain instructional labels, not participant data.
@@ -93,39 +144,13 @@ function parseBoard(): ParsedBoard {
   for (const node of allNodes) {
     const nodeName = node.name.toLowerCase().trim();
 
-    const nameMatch = nodeName.match(ROLE_NAME_PATTERN);
-    if (nameMatch && isContainerNode(node)) {
-      const roleIndex = parseInt(nameMatch[1], 10);
-      const role = ensureRole(roleMap, roleIndex);
-      const stickyName = getFirstStickyText(node as FrameNode | GroupNode | SectionNode);
-      if (stickyName) role.name = stickyName;
-      continue;
-    }
-
-    const objMatch = nodeName.match(ROLE_OBJECTIVES_PATTERN);
-    if (objMatch && isContainerNode(node)) {
-      const roleIndex = parseInt(objMatch[1], 10);
-      const role = ensureRole(roleMap, roleIndex);
-      const stickies = collectOnlyStickies(node as FrameNode | GroupNode | SectionNode);
-      role.objectives.push(...stickies);
-      continue;
-    }
-
-    const painMatch = nodeName.match(ROLE_PAIN_POINTS_PATTERN);
-    if (painMatch && isContainerNode(node)) {
-      const roleIndex = parseInt(painMatch[1], 10);
-      const role = ensureRole(roleMap, roleIndex);
-      const stickies = collectOnlyStickies(node as FrameNode | GroupNode | SectionNode);
-      role.painPoints.push(...stickies);
-      continue;
-    }
-
-    const toolsMatch = nodeName.match(ROLE_TOOLS_PATTERN);
-    if (toolsMatch && isContainerNode(node)) {
-      const roleIndex = parseInt(toolsMatch[1], 10);
-      const role = ensureRole(roleMap, roleIndex);
-      const stickies = collectOnlyStickies(node as FrameNode | GroupNode | SectionNode);
-      role.tools.push(...stickies);
+    const roleMatch = nodeName.match(ROLE_CONTAINER_PATTERN);
+    if (roleMatch && isContainerNode(node)) {
+      const roleIndex = parseInt(roleMatch[1], 10);
+      if (!roleMap.has(roleIndex)) {
+        const role = parseRoleContainer(node as FrameNode | GroupNode | SectionNode, roleIndex);
+        roleMap.set(roleIndex, role);
+      }
       continue;
     }
 
